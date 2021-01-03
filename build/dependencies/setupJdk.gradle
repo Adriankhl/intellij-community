@@ -9,14 +9,25 @@ apply from: 'archivesCleanup.gradle'
 
 def buildJdkVersion = System.getProperty('intellij.build.jdk.version', '8').toInteger()
 def setupJdkTasks = buildJdkVersion == 8 ? ["setupJbr11", "setupJbr8"] : ["setupJbr$buildJdkVersion"]
-task setupJdks(dependsOn: setupJdkTasks)
-cleanSetupJdks.dependsOn('cleanSetupJbr8', 'cleanSetupJbr11', 'cleanDownloadJbr8', 'cleanDownloadJbr11')
-project.ext.jbrRepo = 'https://cache-redirector.jetbrains.com/intellij-jbr'
+
 def jdkDir = System.getProperty('intellij.build.jdks.target.dir')?.with {
   new File(it).mkdirs()
   it
 } ?: "${intellijProjectDir()}/build/jdk"
 
+task setupJdks() {
+  def jdk8Dir = "${jdkDir}/1.8"
+  def jdk11Dir = "${jdkDir}/11"
+  if (buildJdkVersion == 8 && (!new File(jdk8Dir).exists() || !new File(jdk11Dir).exists())) {
+      dependsOn 'setupJdkTasks'
+  }
+  if (buildJdkVersion == 11 && !new File(jdk11Dir).exists()) {
+      dependsOn 'setupJdkTasks'
+  }
+}
+
+cleanSetupJdks.dependsOn('cleanSetupJbr8', 'cleanSetupJbr11', 'cleanDownloadJbr8', 'cleanDownloadJbr11')
+project.ext.jbrRepo = 'https://cache-redirector.jetbrains.com/intellij-jbr'
 ext.jbsdkDir = "$project.buildDir/jbsdk"
 def deleteObsoleteJdkArchives = ext.deleteObsoleteArchivesTask('Jdk', jbsdkDir)
 
